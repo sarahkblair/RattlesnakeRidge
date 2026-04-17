@@ -1,0 +1,40 @@
+{
+  "name": "sarahs-brain-electron",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "concurrently \"node ../server/index.js\" \"electron .\"",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^29.1.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.sarahsbrain.app",
+    "productName": "Sarah's Brain",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "../server/**/*",
+      "../client/dist/**/*",
+      "!../server/node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
