@@ -2,9 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+function getTailscaleIP() {
+  const interfaces = os.networkInterfaces();
+  for (const iface of Object.values(interfaces)) {
+    for (const addr of iface) {
+      // Tailscale assigns addresses in the 100.64.0.0/10 range
+      if (addr.family === 'IPv4' && addr.address.startsWith('100.')) {
+        const second = parseInt(addr.address.split('.')[1], 10);
+        if (second >= 64 && second <= 127) return addr.address;
+      }
+    }
+  }
+  return null;
+}
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -33,8 +48,22 @@ if (fs.existsSync(clientBuild)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Sarah's Brain server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('');
+  console.log("  ✦ Sarah's Brain is running");
+  console.log('');
+  console.log(`  Local:     http://localhost:${PORT}`);
+
+  const tailscaleIP = getTailscaleIP();
+  if (tailscaleIP) {
+    console.log(`  Tailscale: http://${tailscaleIP}:${PORT}  ← use this on your phone`);
+  } else {
+    console.log('  Tailscale: not detected (install Tailscale to access from your phone)');
+  }
+
+  console.log('');
+  console.log('  Press Ctrl+C to stop.');
+  console.log('');
 });
 
 module.exports = app;
