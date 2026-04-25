@@ -1,35 +1,13 @@
 {
-  "name": "rattlesnake-ridge-homestead-hub",
-  "version": "0.1.0",
+  "name": "rattlesnake-ridge",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
-    "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
-    "lint": "next lint",
-    "db:migrate": "prisma migrate dev --name init",
-    "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.36.0",
-    "@prisma/client": "^5.22.0",
-    "date-fns": "^3.6.0",
-    "googleapis": "^140.0.1",
-    "next": "14.2.29",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "dev": "concurrently -k -n SERVER,CLIENT -c cyan,yellow \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "build": "npm run build --prefix client"
   },
   "devDependencies": {
-    "@types/node": "^20.16.11",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.29",
-    "postcss": "^8.4.47",
-    "prisma": "^5.22.0",
-    "tailwindcss": "^3.4.14",
-    "typescript": "^5.6.3"
+    "concurrently": "^8.2.2"
   }
 }
