@@ -1,4 +1,5 @@
-const Database = require('better-sqlite3');
+// Uses Node.js built-in node:sqlite (Node 22.5+) — no native compilation required.
+const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
@@ -6,7 +7,23 @@ const { randomUUID } = require('crypto');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new Database(path.join(DATA_DIR, 'rr.db'));
+const db = new DatabaseSync(path.join(DATA_DIR, 'rr.db'));
+
+// node:sqlite doesn't have db.pragma() or db.transaction() — add them.
+db.pragma = (str) => db.exec(`PRAGMA ${str}`);
+
+db.transaction = (fn) => (...args) => {
+  db.exec('BEGIN');
+  try {
+    const result = fn(...args);
+    db.exec('COMMIT');
+    return result;
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+};
+
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
@@ -198,7 +215,6 @@ CREATE TABLE IF NOT EXISTS shopping_items (
 
 function seed() {
   const now = new Date().toISOString();
-  const today = new Date().toISOString().slice(0, 10);
 
   // --- Plants ---
   const existingPlants = db.prepare('SELECT COUNT(*) as c FROM plants').get();
@@ -229,7 +245,6 @@ function seed() {
       }
     });
 
-    // Wish list
     const insertWish = db.prepare(`
       INSERT INTO wish_list (id,class,species,variety,reason,priority) VALUES (?,?,?,?,?,?)
     `);
@@ -246,57 +261,36 @@ function seed() {
       VALUES (?,?,?,?,?,?,?,?,?,?)
     `);
     const recipes = [
-      {
-        name: 'Sourdough Bread',
-        category: 'Bread', type: 'Baking', emoji: '🍞',
+      { name: 'Sourdough Bread', category: 'Bread', type: 'Baking', emoji: '🍞',
         ingredients: '500g bread flour\n375g water\n100g active sourdough starter\n10g salt',
         method: 'Mix flour and water, autolyse 30 min. Add starter and salt, stretch and fold every 30 min x4. Bulk ferment 4-6 hours. Shape, cold proof overnight. Bake in Dutch oven at 500°F — 20 min covered, 20 min uncovered.',
-        notes: 'Adjust water to 80% hydration for West TX dry climate.',
-      },
-      {
-        name: 'Brown Butter Skillet Cornbread',
-        category: 'Bread', type: 'Baking', emoji: '🌽',
+        notes: 'Adjust water to 80% hydration for West TX dry climate.' },
+      { name: 'Brown Butter Skillet Cornbread', category: 'Bread', type: 'Baking', emoji: '🌽',
         ingredients: '1.5 cups cornmeal\n0.5 cup flour\n1 tsp baking powder\n0.5 tsp baking soda\n1 tsp salt\n2 eggs\n1.5 cups buttermilk\n6 tbsp butter',
         method: 'Brown butter in cast iron skillet. Mix dry ingredients. Whisk eggs and buttermilk. Combine, pour into hot skillet. Bake 400°F for 20-22 min until golden.',
-        notes: 'Use lard instead of butter for extra flavor.',
-      },
-      {
-        name: 'Calabrian Chili Pappardelle',
-        category: 'Main', type: 'Cooking', emoji: '🍝',
+        notes: 'Use lard instead of butter for extra flavor.' },
+      { name: 'Calabrian Chili Pappardelle', category: 'Main', type: 'Cooking', emoji: '🍝',
         ingredients: 'Pappardelle pasta\nCalabrian chilis in oil\nDiced tomatoes\nGarlic\nAnchovy\nParmesan\nButter\nFresh basil',
         method: 'Bloom anchovies and garlic in olive oil. Add Calabrian chilis and tomatoes. Simmer 20 min. Toss with pasta, pasta water, butter. Finish with parmesan and basil.',
-        notes: 'Calabrian chilis from Tutto Calabria brand.',
-      },
-      {
-        name: 'Venison Backstrap',
-        category: 'Main', type: 'Cooking', emoji: '🦌',
+        notes: 'Calabrian chilis from Tutto Calabria brand.' },
+      { name: 'Venison Backstrap', category: 'Main', type: 'Cooking', emoji: '🦌',
         ingredients: 'Venison backstrap\nFresh rosemary and thyme\nGarlic\nButter\nSalt and pepper\nOlive oil',
         method: 'Dry brine overnight with salt. Pat dry. Sear in cast iron 2-3 min per side over high heat. Baste with herb butter. Rest 10 min before slicing against grain.',
-        notes: 'Do not cook past medium-rare — venison dries out fast.',
-      },
-      {
-        name: 'Shakshuka',
-        category: 'Breakfast', type: 'Cooking', emoji: '🍳',
+        notes: 'Do not cook past medium-rare — venison dries out fast.' },
+      { name: 'Shakshuka', category: 'Breakfast', type: 'Cooking', emoji: '🍳',
         ingredients: '6 eggs\n2 cans crushed tomatoes\nBell peppers\nOnion\nGarlic\nCumin, paprika, cayenne\nFeta\nFresh herbs',
         method: 'Sauté onion and peppers. Add garlic and spices. Pour in tomatoes, simmer 15 min. Make wells, crack in eggs. Cover and cook until whites set but yolks runny. Top with feta and herbs.',
-        notes: 'Add harissa for deeper flavor.',
-      },
-      {
-        name: "Grandpa's Cherry Pie",
-        category: 'Dessert', type: 'Baking', emoji: '🥧',
+        notes: 'Add harissa for deeper flavor.' },
+      { name: "Grandpa's Cherry Pie", category: 'Dessert', type: 'Baking', emoji: '🥧',
         ingredients: 'Pie crust (2 discs)\n6 cups fresh or frozen cherries\n1 cup sugar\n1/4 cup cornstarch\n1 tsp almond extract\n2 tbsp butter\nEgg wash',
         method: 'Mix cherries, sugar, cornstarch, almond extract. Fill bottom crust. Dot with butter. Top crust with lattice or vents. Egg wash. Bake 425°F 20 min, reduce to 375°F for 25-30 min.',
-        notes: 'Tart cherries work best. Use almond extract generously.',
-      },
+        notes: 'Tart cherries work best. Use almond extract generously.' },
     ];
     recipes.forEach(r => {
-      insertRecipe.run(randomUUID(), r.name, r.category, r.type, r.emoji, r.ingredients, r.method, r.notes || null, r.source_url || null, now);
+      insertRecipe.run(randomUUID(), r.name, r.category, r.type, r.emoji, r.ingredients, r.method, r.notes || null, null, now);
     });
 
-    // Meal pool
-    const insertMeal = db.prepare(`
-      INSERT INTO meal_pool (id,name,components,time_estimate,season,added_at) VALUES (?,?,?,?,?,?)
-    `);
+    const insertMeal = db.prepare(`INSERT INTO meal_pool (id,name,components,time_estimate,season,added_at) VALUES (?,?,?,?,?,?)`);
     insertMeal.run(randomUUID(), 'Smoky Venison Chili', 'Main dish', '2.5 hours', 'Fall/Winter', now);
     insertMeal.run(randomUUID(), 'Thai Red Curry Chicken', 'Main dish', '45 min', 'Year-round', now);
     insertMeal.run(randomUUID(), 'Calabrian Chili Pappardelle', 'Main dish', '30 min', 'Year-round', now);
@@ -311,101 +305,44 @@ function seed() {
       INSERT INTO projects (id,title,status,owner,category,start_date,budget,next_action,hero_image,created_at)
       VALUES (?,?,?,?,?,?,?,?,?,?)
     `);
-    const insertMaterial = db.prepare(`
-      INSERT INTO project_materials (id,project_id,name,cost,where_buy,bought,sort_order) VALUES (?,?,?,?,?,?,?)
-    `);
-    const insertLabor = db.prepare(`
-      INSERT INTO project_labor (id,project_id,description,cost,contractor,paid,sort_order) VALUES (?,?,?,?,?,?,?)
-    `);
-    const insertNote = db.prepare(`
-      INSERT INTO project_notes (id,project_id,date,text) VALUES (?,?,?,?)
-    `);
+    const insertMaterial = db.prepare(`INSERT INTO project_materials (id,project_id,name,cost,where_buy,bought,sort_order) VALUES (?,?,?,?,?,?,?)`);
+    const insertLabor = db.prepare(`INSERT INTO project_labor (id,project_id,description,cost,contractor,paid,sort_order) VALUES (?,?,?,?,?,?,?)`);
+    const insertNote = db.prepare(`INSERT INTO project_notes (id,project_id,date,text) VALUES (?,?,?,?)`);
 
-    // Kyle's Shop
     const shopId = randomUUID();
-    insertProject.run(shopId, "Kyle's Shop", 'active', 'Kyle', 'Land', '2026-03-01', 45000,
-      'Get 3 concrete contractor quotes for the slab pour.', null, now);
-    const shopMaterials = [
-      ['Concrete slab', 8000, 'Local supplier', 0],
-      ['Steel framing', 12000, 'Metal supply co.', 0],
-      ['Roofing metal', 3500, 'Metal supply co.', 0],
-      ['Electrical panel & wiring', 4000, 'Home Depot', 0],
-      ['Garage doors (2x)', 2800, 'Online order', 1],
-      ['Insulation', 1800, 'Home Depot', 0],
-    ];
-    shopMaterials.forEach(([name, cost, where_buy, bought], i) => {
-      insertMaterial.run(randomUUID(), shopId, name, cost, where_buy, bought, i);
-    });
+    insertProject.run(shopId, "Kyle's Shop", 'active', 'Kyle', 'Land', '2026-03-01', 45000, 'Get 3 concrete contractor quotes for the slab pour.', null, now);
+    [['Concrete slab',8000,'Local supplier',0],['Steel framing',12000,'Metal supply co.',0],['Roofing metal',3500,'Metal supply co.',0],['Electrical panel & wiring',4000,'Home Depot',0],['Garage doors (2x)',2800,'Online order',1],['Insulation',1800,'Home Depot',0]]
+      .forEach(([name, cost, where_buy, bought], i) => insertMaterial.run(randomUUID(), shopId, name, cost, where_buy, bought, i));
     insertLabor.run(randomUUID(), shopId, 'Concrete slab pour', 4500, 'TBD', 0, 0);
     insertLabor.run(randomUUID(), shopId, 'Steel frame erection', 6000, 'TBD', 0, 1);
     insertLabor.run(randomUUID(), shopId, 'Electrical rough-in', 3200, 'TBD', 0, 2);
     insertNote.run(randomUUID(), shopId, '2026-03-01', 'Decided on 40x60 ft footprint. Kyle wants 14ft clearance for the truck lift.');
     insertNote.run(randomUUID(), shopId, '2026-04-01', 'Got first quote from Martinez Concrete — came in too high. Getting 2 more bids.');
 
-    // Pottery Studio
     const potteryId = randomUUID();
-    insertProject.run(potteryId, 'Pottery Studio', 'todo', 'Sarah', 'Kitchen', null, 8000,
-      'Research pottery wheel options — Brent vs. Speedball vs. Shimpo.', null, now);
-    const potteryMaterials = [
-      ['Pottery wheel', 1200, 'Sheffield Pottery', 0],
-      ['Kiln (electric)', 2800, 'Skutt Kilns', 0],
-      ['Clay 50 lb x 10', 250, 'Local ceramic supplier', 0],
-      ['Glazes starter set', 180, 'Sheffield Pottery', 0],
-      ['Modeling & trimming tools', 120, 'Amazon', 0],
-      ['Brushes set', 45, 'Amazon', 0],
-      ['Kiln shelves & posts', 280, 'Skutt', 0],
-      ['Apron & protective gear', 60, 'Amazon', 0],
-    ];
-    potteryMaterials.forEach(([name, cost, where_buy, bought], i) => {
-      insertMaterial.run(randomUUID(), potteryId, name, cost, where_buy, bought, i);
-    });
+    insertProject.run(potteryId, 'Pottery Studio', 'todo', 'Sarah', 'Kitchen', null, 8000, 'Research pottery wheel options — Brent vs. Speedball vs. Shimpo.', null, now);
+    [['Pottery wheel',1200,'Sheffield Pottery',0],['Kiln (electric)',2800,'Skutt Kilns',0],['Clay 50 lb x 10',250,'Local ceramic supplier',0],['Glazes starter set',180,'Sheffield Pottery',0],['Modeling & trimming tools',120,'Amazon',0],['Brushes set',45,'Amazon',0],['Kiln shelves & posts',280,'Skutt',0],['Apron & protective gear',60,'Amazon',0]]
+      .forEach(([name, cost, where_buy, bought], i) => insertMaterial.run(randomUUID(), potteryId, name, cost, where_buy, bought, i));
     insertNote.run(randomUUID(), potteryId, '2026-04-01', 'Goal: hand-throw all everyday dishes for the house over 2-3 years. Start with bowls and mugs.');
 
-    // Wooden Spoon Carving
     const spoonId = randomUUID();
-    insertProject.run(spoonId, 'Wooden Spoon Carving', 'todo', 'Sarah', 'Kitchen', null, 600,
-      'Source cherry and walnut blanks from local hardwood dealer.', null, now);
-    const spoonMaterials = [
-      ['Wood blanks (cherry x10)', 80, 'Hardwood dealer', 0],
-      ['Wood blanks (walnut x10)', 100, 'Hardwood dealer', 0],
-      ['Hook knife', 45, 'BeaverCraft', 0],
-      ['Straight carving knife', 40, 'BeaverCraft', 0],
-      ['Spoon gouge', 55, 'Mora', 0],
-      ['Leather strop + compound', 30, 'Amazon', 0],
-      ['Food-safe mineral oil', 18, 'Amazon', 1],
-      ['Beeswax finish', 22, 'Local', 0],
-    ];
-    spoonMaterials.forEach(([name, cost, where_buy, bought], i) => {
-      insertMaterial.run(randomUUID(), spoonId, name, cost, where_buy, bought, i);
-    });
+    insertProject.run(spoonId, 'Wooden Spoon Carving', 'todo', 'Sarah', 'Kitchen', null, 600, 'Source cherry and walnut blanks from local hardwood dealer.', null, now);
+    [['Wood blanks (cherry x10)',80,'Hardwood dealer',0],['Wood blanks (walnut x10)',100,'Hardwood dealer',0],['Hook knife',45,'BeaverCraft',0],['Straight carving knife',40,'BeaverCraft',0],['Spoon gouge',55,'Mora',0],['Leather strop + compound',30,'Amazon',0],['Food-safe mineral oil',18,'Amazon',1],['Beeswax finish',22,'Local',0]]
+      .forEach(([name, cost, where_buy, bought], i) => insertMaterial.run(randomUUID(), spoonId, name, cost, where_buy, bought, i));
     insertNote.run(randomUUID(), spoonId, '2026-04-01', 'Want to carve cooking spoons, serving spoons, and spatulas. Start with easier straight-grain cherry before walnut.');
   }
 
   // --- Maintenance Tasks ---
   const existingTasks = db.prepare('SELECT COUNT(*) as c FROM maintenance_tasks').get();
   if (existingTasks.c === 0) {
-    const insertTask = db.prepare(`
-      INSERT INTO maintenance_tasks (id,name,category,frequency_days,notes,last_done_at,next_due_at)
-      VALUES (?,?,?,?,?,?,?)
-    `);
-
-    const tasks = [
-      { name: 'Weekly cleaning', category: 'House', freq: 7 },
-      { name: 'AC / HVAC filter change', category: 'Systems', freq: 30 },
-      { name: 'Generator test run', category: 'Systems', freq: 30 },
-      { name: "Brad's tank clean", category: 'Animals', freq: 60 },
-      { name: "Cookie's feeding", category: 'Animals', freq: 60 },
-      { name: 'Clean showerheads', category: 'House', freq: 90 },
-      { name: 'Pest spray', category: 'House', freq: 90 },
-      { name: 'Dryer vent clean', category: 'House', freq: 180 },
-      { name: 'Gutter cleaning', category: 'House', freq: 180 },
-      { name: 'Chimney clean', category: 'House', freq: 365 },
-      { name: 'Power wash exterior', category: 'House', freq: 365 },
-      { name: 'Well system check', category: 'Systems', freq: 365 },
-      { name: 'Mow / brush management', category: 'Land', freq: 14 },
-    ];
-
-    tasks.forEach(({ name, category, freq }) => {
+    const insertTask = db.prepare(`INSERT INTO maintenance_tasks (id,name,category,frequency_days,notes,last_done_at,next_due_at) VALUES (?,?,?,?,?,?,?)`);
+    [
+      ['Weekly cleaning','House',7],['AC / HVAC filter change','Systems',30],['Generator test run','Systems',30],
+      ["Brad's tank clean",'Animals',60],["Cookie's feeding",'Animals',60],['Clean showerheads','House',90],
+      ['Pest spray','House',90],['Dryer vent clean','House',180],['Gutter cleaning','House',180],
+      ['Chimney clean','House',365],['Power wash exterior','House',365],['Well system check','Systems',365],
+      ['Mow / brush management','Land',14],
+    ].forEach(([name, category, freq]) => {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + Math.floor(Math.random() * freq));
       insertTask.run(randomUUID(), name, category, freq, null, null, dueDate.toISOString().slice(0, 10));
@@ -415,17 +352,13 @@ function seed() {
   // --- Shopping Items ---
   const existingShopping = db.prepare('SELECT COUNT(*) as c FROM shopping_items').get();
   if (existingShopping.c === 0) {
-    const insertShop = db.prepare(`
-      INSERT INTO shopping_items (id,room,name,brand,price,qty,image_url,image_filename,notes,source_url,sort_order,created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-    `);
+    const insertShop = db.prepare(`INSERT INTO shopping_items (id,room,name,brand,price,qty,image_url,image_filename,notes,source_url,sort_order,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
     insertShop.run(randomUUID(), 'Kitchen', 'Cast Iron Dutch Oven 5.5qt', 'Staub', 349, 1, null, null, 'Matte black or dark blue', null, 0, now);
     insertShop.run(randomUUID(), 'Kitchen', 'Classic 8in Chef Knife', 'Shun', 185, 1, null, null, null, null, 1, now);
     insertShop.run(randomUUID(), 'Living Room', 'Leather Chesterfield Sofa Cognac', 'Pottery Barn', 3200, 1, null, null, 'Check dimensions — 88in wide. Measure doorway first.', null, 0, now);
     insertShop.run(randomUUID(), 'Master Bedroom', 'Linen Duvet Cover Natural', 'Parachute', 229, 1, null, null, 'King size', null, 0, now);
   }
 
-  // Default settings
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('google_doc_url', '')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('compass_state', NULL)").run();
 }
