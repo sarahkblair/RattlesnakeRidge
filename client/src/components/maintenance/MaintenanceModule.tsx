@@ -38,7 +38,7 @@ export function MaintenanceModule({ theme }: { theme: Theme }) {
 }
 
 function DueSoon({ theme }: { theme: Theme }) {
-  const { data: tasks = [] } = useSWR<MaintenanceTask[]>('/api/maintenance/tasks', apiFetch);
+  const { data: tasks = [] } = useSWR<MaintenanceTask[]>('/maintenance/tasks', apiFetch);
   const [completing, setCompleting] = useState<MaintenanceTask | null>(null);
   const [completeForm, setCompleteForm] = useState({ who: 'Both', notes: '' });
   const [loading, setLoading] = useState(false);
@@ -66,8 +66,8 @@ function DueSoon({ theme }: { theme: Theme }) {
     setLoading(true);
     try {
       await apiPost(`/maintenance/tasks/${completing.id}/complete`, completeForm);
-      mutate('/api/maintenance/tasks');
-      mutate('/api/maintenance/history');
+      mutate('/maintenance/tasks');
+      mutate('/maintenance/history');
       setCompleting(null);
       setCompleteForm({ who: 'Both', notes: '' });
     } finally {
@@ -123,7 +123,7 @@ function DueSoon({ theme }: { theme: Theme }) {
 }
 
 function TaskLibrary({ theme }: { theme: Theme }) {
-  const { data: tasks = [] } = useSWR<MaintenanceTask[]>('/api/maintenance/tasks', apiFetch);
+  const { data: tasks = [] } = useSWR<MaintenanceTask[]>('/maintenance/tasks', apiFetch);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: '', category: 'House', frequency_days: '30', notes: '' });
   const { showToast } = useToast();
@@ -131,14 +131,14 @@ function TaskLibrary({ theme }: { theme: Theme }) {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     await apiPost('/maintenance/tasks', { ...form, frequency_days: parseInt(form.frequency_days) });
-    mutate('/api/maintenance/tasks');
+    mutate('/maintenance/tasks');
     setShowAdd(false);
     setForm({ name: '', category: 'House', frequency_days: '30', notes: '' });
   };
 
   const handleDelete = (task: MaintenanceTask) => {
     let committed = false;
-    const tid = setTimeout(async () => { committed = true; await apiDelete(`/maintenance/tasks/${task.id}`); mutate('/api/maintenance/tasks'); }, 5000);
+    const tid = setTimeout(async () => { committed = true; await apiDelete(`/maintenance/tasks/${task.id}`); mutate('/maintenance/tasks'); }, 5000);
     showToast(`Deleted "${task.name}"`, () => { if (!committed) clearTimeout(tid); });
   };
 
@@ -187,7 +187,7 @@ function TaskLibrary({ theme }: { theme: Theme }) {
 }
 
 function HistoryView({ theme }: { theme: Theme }) {
-  const { data: history = [] } = useSWR<MaintenanceHistory[]>('/api/maintenance/history', apiFetch);
+  const { data: history = [] } = useSWR<MaintenanceHistory[]>('/maintenance/history', apiFetch);
   const [search, setSearch] = useState('');
 
   const filtered = history.filter(h =>

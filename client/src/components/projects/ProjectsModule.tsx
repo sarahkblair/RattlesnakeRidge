@@ -12,7 +12,7 @@ const STATUS_LABELS = { active: '🔨 Active', todo: '📋 To Do', completed: '�
 const STATUS_ICONS = { active: '🔨', todo: '📋', completed: '✅' };
 
 export function ProjectsModule({ theme }: { theme: Theme }) {
-  const { data: projects = [] } = useSWR<Project[]>('/api/projects', apiFetch);
+  const { data: projects = [] } = useSWR<Project[]>('/projects', apiFetch);
   const [selected, setSelected] = useState<Project | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', owner: 'Both', category: 'House', budget: '', next_action: '' });
@@ -21,7 +21,7 @@ export function ProjectsModule({ theme }: { theme: Theme }) {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const proj = await apiPost<Project>('/projects', { ...form, budget: parseFloat(form.budget) || null, status: 'todo' });
-    mutate('/api/projects');
+    mutate('/projects');
     setShowAdd(false);
     setSelected(proj);
     setForm({ title: '', owner: 'Both', category: 'House', budget: '', next_action: '' });
@@ -96,12 +96,12 @@ export function ProjectsModule({ theme }: { theme: Theme }) {
             key={selected.id}
             project={selected}
             theme={theme}
-            onUpdate={(updated) => { mutate('/api/projects'); setSelected(updated); }}
+            onUpdate={(updated) => { mutate('/projects'); setSelected(updated); }}
             onDelete={() => {
               const proj = selected;
               setSelected(null);
               let committed = false;
-              const tid = setTimeout(async () => { committed = true; await apiDelete(`/projects/${proj.id}`); mutate('/api/projects'); }, 5000);
+              const tid = setTimeout(async () => { committed = true; await apiDelete(`/projects/${proj.id}`); mutate('/projects'); }, 5000);
               showToast(`Deleted "${proj.title}"`, () => { if (!committed) clearTimeout(tid); });
             }}
             showToast={showToast}
@@ -117,11 +117,11 @@ function ProjectDetail({ project, theme, onUpdate, onDelete, showToast }: {
   onUpdate: (p: Project) => void; onDelete: () => void;
   showToast: (msg: string, undo?: () => void) => void;
 }) {
-  const { data: materials = [], mutate: mutateMaterials } = useSWR<ProjectMaterial[]>(`/api/projects/${project.id}/materials`, apiFetch);
-  const { data: labor = [], mutate: mutateLabor } = useSWR<ProjectLabor[]>(`/api/projects/${project.id}/labor`, apiFetch);
-  const { data: notes = [], mutate: mutateNotes } = useSWR<ProjectNote[]>(`/api/projects/${project.id}/notes`, apiFetch);
-  const { data: resources = [], mutate: mutateResources } = useSWR<ProjectResource[]>(`/api/projects/${project.id}/resources`, apiFetch);
-  const { data: images = [], mutate: mutateImages } = useSWR<{ id: string; filename: string }[]>(`/api/projects/${project.id}/images`, apiFetch);
+  const { data: materials = [], mutate: mutateMaterials } = useSWR<ProjectMaterial[]>(`/projects/${project.id}/materials`, apiFetch);
+  const { data: labor = [], mutate: mutateLabor } = useSWR<ProjectLabor[]>(`/projects/${project.id}/labor`, apiFetch);
+  const { data: notes = [], mutate: mutateNotes } = useSWR<ProjectNote[]>(`/projects/${project.id}/notes`, apiFetch);
+  const { data: resources = [], mutate: mutateResources } = useSWR<ProjectResource[]>(`/projects/${project.id}/resources`, apiFetch);
+  const { data: images = [], mutate: mutateImages } = useSWR<{ id: string; filename: string }[]>(`/projects/${project.id}/images`, apiFetch);
 
   const [editTitle, setEditTitle] = useState(false);
   const [titleVal, setTitleVal] = useState(project.title);

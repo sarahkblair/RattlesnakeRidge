@@ -14,7 +14,7 @@ interface Props { theme: { gradient: string; accent: string; accentDim: string; 
 type GroupedPlants = Record<string, Record<string, Record<string, Plant[]>>>;
 
 export function GardenModule({ theme }: Props) {
-  const { data: plants = [] } = useSWR<Plant[]>('/api/plants', apiFetch);
+  const { data: plants = [] } = useSWR<Plant[]>('/plants', apiFetch);
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [showWishList, setShowWishList] = useState(false);
   const [showAddPlant, setShowAddPlant] = useState(false);
@@ -36,7 +36,7 @@ export function GardenModule({ theme }: Props) {
   const handleAddPlant = async (e: React.FormEvent) => {
     e.preventDefault();
     await apiPost('/plants', form);
-    mutate('/api/plants');
+    mutate('/plants');
     setShowAddPlant(false);
     setForm({ class: '', species: '', variety: '', plant_name: '', location: '', unconfirmed: false });
   };
@@ -44,7 +44,7 @@ export function GardenModule({ theme }: Props) {
   const handleDelete = async (plant: Plant) => {
     const doDelete = async () => {
       await apiDelete(`/plants/${plant.id}`);
-      mutate('/api/plants');
+      mutate('/plants');
       if (selectedPlant?.id === plant.id) setSelectedPlant(null);
     };
     showToast(`Deleted "${plant.plant_name}"`, doDelete);
@@ -153,13 +153,13 @@ export function GardenModule({ theme }: Props) {
             plant={selectedPlant}
             theme={theme}
             onPlantUpdate={(updated) => {
-              mutate('/api/plants');
+              mutate('/plants');
               setSelectedPlant(updated);
             }}
             onDelete={() => {
               const plant = selectedPlant;
               setSelectedPlant(null);
-              const doDelete = async () => { await apiDelete(`/plants/${plant.id}`); mutate('/api/plants'); };
+              const doDelete = async () => { await apiDelete(`/plants/${plant.id}`); mutate('/plants'); };
               let committed = false;
               const tid = setTimeout(() => { committed = true; doDelete(); }, 5000);
               showToast(`Deleted "${plant.plant_name}"`, () => { if (!committed) clearTimeout(tid); });

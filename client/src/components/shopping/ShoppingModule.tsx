@@ -12,7 +12,7 @@ type AddMode = 'url' | 'manual' | 'photo';
 
 export function ShoppingModule({ theme }: { theme: Theme }) {
   const [room, setRoom] = useState('Kitchen');
-  const { data: allItems = [], mutate: mutateItems } = useSWR<ShoppingItem[]>('/api/shopping', apiFetch);
+  const { data: allItems = [], mutate: mutateItems } = useSWR<ShoppingItem[]>('/shopping', apiFetch);
   const [addMode, setAddMode] = useState<AddMode | null>(null);
   const { showToast } = useToast();
 

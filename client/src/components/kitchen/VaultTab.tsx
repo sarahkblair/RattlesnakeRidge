@@ -12,7 +12,7 @@ const CATEGORIES = ['All', 'Bread', 'Main', 'Breakfast', 'Dessert', 'Sauce', 'Ot
 const TYPES = ['All', 'Baking', 'Cooking'];
 
 export function VaultTab({ theme }: { theme: Theme }) {
-  const { data: recipes = [] } = useSWR<Recipe[]>('/api/recipes', apiFetch);
+  const { data: recipes = [] } = useSWR<Recipe[]>('/recipes', apiFetch);
   const [catFilter, setCatFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [selected, setSelected] = useState<Recipe | null>(null);
@@ -32,7 +32,7 @@ export function VaultTab({ theme }: { theme: Theme }) {
     setSaving(true);
     try {
       await apiPost('/recipes', form);
-      mutate('/api/recipes');
+      mutate('/recipes');
       setShowAdd(false);
       setForm({ name: '', category: 'Main', type: 'Cooking', emoji: '🍽️', ingredients: '', method: '', notes: '', source_url: '' });
     } finally {
@@ -42,7 +42,7 @@ export function VaultTab({ theme }: { theme: Theme }) {
 
   const handleDelete = (r: Recipe) => {
     let committed = false;
-    const tid = setTimeout(async () => { committed = true; await apiDelete(`/recipes/${r.id}`); mutate('/api/recipes'); setSelected(null); }, 5000);
+    const tid = setTimeout(async () => { committed = true; await apiDelete(`/recipes/${r.id}`); mutate('/recipes'); setSelected(null); }, 5000);
     showToast(`Deleted "${r.name}"`, () => { if (!committed) clearTimeout(tid); });
   };
 

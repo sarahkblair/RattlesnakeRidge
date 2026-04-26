@@ -23,7 +23,7 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 export function WishList({ theme, onAddToPlants }: Props) {
-  const { data: items = [], mutate: mutateItems } = useSWR<WishListItem[]>('/api/wish-list', apiFetch);
+  const { data: items = [], mutate: mutateItems } = useSWR<WishListItem[]>('/wish-list', apiFetch);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ class: '', species: '', variety: '', reason: '', priority: 'medium' as 'high' | 'medium' | 'low' });
   const { showToast } = useToast();

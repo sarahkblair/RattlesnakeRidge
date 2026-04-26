@@ -16,8 +16,8 @@ const RATINGS = [
 ];
 
 export function GroceryTab({ theme }: { theme: Theme }) {
-  const { data: pool = [], mutate: mutatePool } = useSWR<MealPoolItem[]>('/api/meal-pool', apiFetch);
-  const { data: groceries = [], mutate: mutateGroceries } = useSWR<GroceryItem[]>('/api/grocery', apiFetch);
+  const { data: pool = [], mutate: mutatePool } = useSWR<MealPoolItem[]>('/meal-pool', apiFetch);
+  const { data: groceries = [], mutate: mutateGroceries } = useSWR<GroceryItem[]>('/grocery', apiFetch);
   const [ratingTarget, setRatingTarget] = useState<MealPoolItem | null>(null);
   const [showAddPool, setShowAddPool] = useState(false);
   const [poolForm, setPoolForm] = useState({ name: '', components: '', time_estimate: '', season: '' });

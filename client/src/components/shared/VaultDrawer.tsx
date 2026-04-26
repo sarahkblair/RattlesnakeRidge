@@ -13,7 +13,7 @@ const CATEGORIES = ['All', 'Bread', 'Main', 'Breakfast', 'Dessert', 'Sauce', 'Ot
 const TYPES = ['All', 'Baking', 'Cooking'];
 
 export function VaultDrawer({ open, onClose }: Props) {
-  const { data: recipes = [] } = useSWR<Recipe[]>('/api/recipes', apiFetch);
+  const { data: recipes = [] } = useSWR<Recipe[]>('/recipes', apiFetch);
   const [catFilter, setCatFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [showAdd, setShowAdd] = useState(false);
@@ -32,7 +32,7 @@ export function VaultDrawer({ open, onClose }: Props) {
     setSaving(true);
     try {
       await apiPost('/recipes', form);
-      mutate('/api/recipes');
+      mutate('/recipes');
       setShowAdd(false);
       setForm({ name: '', category: 'Main', type: 'Cooking', emoji: '🍽️', ingredients: '', method: '', notes: '', source_url: '' });
     } finally {

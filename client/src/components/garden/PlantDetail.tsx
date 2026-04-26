@@ -57,7 +57,7 @@ export function PlantDetail({ plant, theme, onPlantUpdate, onDelete }: Props) {
 }
 
 function CareTab({ plant, theme }: { plant: Plant; theme: any }) {
-  const { data: plan, mutate: mutatePlan } = useSWR<CarePlan>(`/api/plants/${plant.id}/care-plan`, apiFetch);
+  const { data: plan, mutate: mutatePlan } = useSWR<CarePlan>(`/plants/${plant.id}/care-plan`, apiFetch);
   const [loading, setLoading] = useState(false);
   const [weather, setWeather] = useState<WeatherDay[]>([]);
   const [timeAgo, setTimeAgo] = useState('');
@@ -136,7 +136,7 @@ function CareTab({ plant, theme }: { plant: Plant; theme: any }) {
 }
 
 function HistoryTab({ plant, theme, showToast }: { plant: Plant; theme: any; showToast: any }) {
-  const { data: history = [], mutate: mutateHistory } = useSWR<PlantHistory[]>(`/api/plants/${plant.id}/history`, apiFetch);
+  const { data: history = [], mutate: mutateHistory } = useSWR<PlantHistory[]>(`/plants/${plant.id}/history`, apiFetch);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), event: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -216,9 +216,9 @@ function HistoryTab({ plant, theme, showToast }: { plant: Plant; theme: any; sho
 }
 
 function DataTab({ plant, theme, showToast }: { plant: Plant; theme: any; showToast: any }) {
-  const { data: photos = [], mutate: mutatePhotos } = useSWR<PlantPhoto[]>(`/api/plants/${plant.id}/photos`, apiFetch);
-  const { data: profile, mutate: mutateProfile } = useSWR<BotanicalProfile>(`/api/plants/${plant.id}/botanical-profile`, apiFetch);
-  const { data: harvests = [], mutate: mutateHarvests } = useSWR<Harvest[]>(`/api/plants/${plant.id}/harvests`, apiFetch);
+  const { data: photos = [], mutate: mutatePhotos } = useSWR<PlantPhoto[]>(`/plants/${plant.id}/photos`, apiFetch);
+  const { data: profile, mutate: mutateProfile } = useSWR<BotanicalProfile>(`/plants/${plant.id}/botanical-profile`, apiFetch);
+  const { data: harvests = [], mutate: mutateHarvests } = useSWR<Harvest[]>(`/plants/${plant.id}/harvests`, apiFetch);
   const [uploading, setUploading] = useState(false);
   const [genProfile, setGenProfile] = useState(false);
   const [harvestForm, setHarvestForm] = useState({ date: new Date().toISOString().slice(0, 10), amount: '', notes: '' });
