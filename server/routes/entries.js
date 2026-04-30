@@ -193,4 +193,31 @@ function syncTags(db, entryId, tagNames) {
   }
 }
 
+// Book pairings
+router.get('/:id/pairings', (req, res) => {
+  const db = getDb();
+  const id = parseInt(req.params.id);
+  const rows = db.prepare(`
+    SELECT e.id as paired_id, e.title, e.author FROM entries e
+    JOIN book_pairings bp ON (bp.entry_id_a = ? AND bp.entry_id_b = e.id)
+      OR (bp.entry_id_b = ? AND bp.entry_id_a = e.id)
+  `).all(id, id);
+  res.json(rows);
+});
+
+router.put('/:id/pairings', (req, res) => {
+  const db = getDb();
+  const id = parseInt(req.params.id);
+  const { pairs } = req.body; // array of paired entry IDs
+
+  db.prepare('DELETE FROM book_pairings WHERE entry_id_a = ? OR entry_id_b = ?').run(id, id);
+
+  for (const pairId of (pairs || [])) {
+    const a = Math.min(id, pairId);
+    const b = Math.max(id, pairId);
+    db.prepare('INSERT OR IGNORE INTO book_pairings (entry_id_a, entry_id_b) VALUES (?, ?)').run(a, b);
+  }
+  res.json({ ok: true });
+});
+
 module.exports = router;

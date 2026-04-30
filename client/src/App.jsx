@@ -1,93 +1,96 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './utils/api.js';
-import TopBar from './components/TopBar.jsx';
-import Navigation from './components/Navigation.jsx';
-import DailyStrip from './components/DailyStrip.jsx';
-import EntryList from './components/EntryList.jsx';
-import EntryDetail from './components/EntryDetail.jsx';
+import ChecklistBar from './components/ChecklistBar.jsx';
+import Header from './components/Header.jsx';
+import QuickAdd from './components/QuickAdd.jsx';
+import FavoritesManager from './components/FavoritesManager.jsx';
+import LearnTab from './components/tabs/LearnTab.jsx';
+import WorkoutTab from './components/tabs/WorkoutTab.jsx';
+import MeditationTab from './components/tabs/MeditationTab.jsx';
+import BeautyTab from './components/tabs/BeautyTab.jsx';
+import StyleTab from './components/tabs/StyleTab.jsx';
+import CyclesTab from './components/tabs/CyclesTab.jsx';
+import VisionTab from './components/tabs/VisionTab.jsx';
 import Settings from './components/Settings.jsx';
 import FirstLaunch from './components/FirstLaunch.jsx';
-import MobileNav from './components/MobileNav.jsx';
+
+const TABS = [
+  { id: 'learn', label: 'Learn' },
+  { id: 'workout', label: 'Workout' },
+  { id: 'meditation', label: 'Meditation & Breathing' },
+  { id: 'beauty', label: 'Beauty' },
+  { id: 'style', label: 'Style' },
+  { id: 'cycles', label: 'Cycles' },
+  { id: 'vision', label: 'This Is What I Want' },
+];
 
 export default function App() {
   const [ready, setReady] = useState(false);
   const [firstLaunch, setFirstLaunch] = useState(false);
-  const [activeSection, setActiveSection] = useState('vocabulary');
-  const [activeTag, setActiveTag] = useState(null);
-  const [selectedEntry, setSelectedEntry] = useState(null);
+  const [activeTab, setActiveTab] = useState('learn');
   const [showSettings, setShowSettings] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [searchMode, setSearchMode] = useState('standard'); // 'standard' | 'ai'
   const [tags, setTags] = useState([]);
-  const [dailyData, setDailyData] = useState(null);
-  const [entryListKey, setEntryListKey] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [mobileView, setMobileView] = useState('list'); // 'list' | 'detail'
+  const [entryRefreshKey, setEntryRefreshKey] = useState(0);
+  const [isMobile] = useState(() => window.innerWidth <= 768);
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  useEffect(() => {
-    init();
-  }, []);
+  useEffect(() => { init(); }, []);
 
   async function init() {
     try {
       const { settings } = await api.getSettings();
-      if (settings.first_launch_complete !== 'true') {
-        setFirstLaunch(true);
-      }
-      const [tagsData, daily] = await Promise.all([api.getTags(), api.getDaily()]);
+      if (settings.first_launch_complete !== 'true') { setFirstLaunch(true); }
+      const savedTab = settings.active_tab || 'learn';
+      setActiveTab(savedTab);
+    } catch (e) { /* first time, no settings yet */ }
+    try {
+      const tagsData = await api.getTags();
       setTags(tagsData);
-      setDailyData(daily);
-      setReady(true);
-    } catch (e) {
-      console.error(e);
-      setReady(true);
-    }
+    } catch (e) {}
+    setReady(true);
   }
 
   const refreshTags = useCallback(async () => {
-    const tagsData = await api.getTags();
-    setTags(tagsData);
+    const data = await api.getTags();
+    setTags(data);
   }, []);
 
-  const refreshDaily = useCallback(async () => {
-    const daily = await api.getDaily();
-    setDailyData(daily);
-  }, []);
-
-  const handleSelectSection = (section, tag = null) => {
-    setActiveSection(section);
-    setActiveTag(tag);
-    setSelectedEntry(null);
-    setSearchQuery('');
-    setSearchResults(null);
-    if (isMobile) setMobileView('list');
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    api.updateSetting('active_tab', tab).catch(() => {});
   };
 
-  const handleSelectEntry = (entry) => {
-    setSelectedEntry(entry);
-    if (isMobile) setMobileView('detail');
-  };
+  // Natural language detection
+  const isNaturalLanguage = q => q.length > 20 && /\b(find|show|get|recommend|article|podcast|video|about|related to|on the topic)\b/i.test(q);
 
-  const handleSearch = async (q) => {
+  const handleSearch = useCallback(async (q) => {
     setSearchQuery(q);
-    if (!q.trim()) { setSearchResults(null); return; }
-    try {
-      const data = await api.search(q);
-      setSearchResults(data.results);
-    } catch (e) { console.error(e); }
-  };
+    if (!q.trim()) { setSearchResults(null); setSearchMode('standard'); return; }
 
-  const handleEntryChange = () => {
-    setEntryListKey(k => k + 1);
-    refreshTags();
-    refreshDaily();
-  };
+    if (isNaturalLanguage(q)) {
+      setSearchMode('ai');
+      try {
+        const data = await api.aiMediaSearch(q);
+        setSearchResults({ ai: true, results: data.results, query: q });
+      } catch (e) {
+        // Fall back to standard
+        const data = await api.search(q);
+        setSearchResults({ ai: false, ...data });
+      }
+    } else {
+      setSearchMode('standard');
+      try {
+        const data = await api.search(q);
+        setSearchResults({ ai: false, ...data });
+      } catch (e) { console.error(e); }
+    }
+  }, []);
+
+  const handleEntryChange = () => setEntryRefreshKey(k => k + 1);
 
   const handleFinishFirstLaunch = async () => {
     await api.updateSetting('first_launch_complete', 'true');
@@ -96,7 +99,7 @@ export default function App() {
   };
 
   if (!ready) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', color: 'var(--text-mid)', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontStyle: 'italic' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', color: 'var(--text-light)', fontFamily: 'var(--font-serif)', fontSize: '1.1rem', fontStyle: 'italic' }}>
       Opening your library…
     </div>
   );
@@ -105,91 +108,47 @@ export default function App() {
 
   if (showSettings) return (
     <div className="app-shell">
-      <TopBar
-        onSearch={handleSearch}
-        onNewEntry={() => {}}
-        onSettings={() => setShowSettings(false)}
-        showingSettings
-      />
-      <Settings
-        onClose={() => setShowSettings(false)}
-        tags={tags}
-        onRefreshTags={refreshTags}
-      />
+      <ChecklistBar />
+      <Header onSearch={() => {}} searchQuery="" onNewEntry={() => {}} onSettings={() => setShowSettings(false)} onFavorites={() => {}} onQuickAdd={() => {}} showingSettings />
+      <Settings onClose={() => setShowSettings(false)} tags={tags} onRefreshTags={refreshTags} />
     </div>
   );
 
-  const showDailyStrip = !selectedEntry || (isMobile && mobileView === 'list');
+  const tabProps = { searchQuery, searchResults, searchMode, tags, onRefreshTags: refreshTags, onEntryChange: handleEntryChange, isMobile, entryRefreshKey };
 
   return (
     <div className="app-shell">
-      <TopBar
+      <ChecklistBar />
+
+      <Header
         onSearch={handleSearch}
         searchQuery={searchQuery}
-        onNewEntry={() => {
-          setSelectedEntry({ _new: true, section: activeSection });
-          if (isMobile) setMobileView('detail');
-        }}
+        onNewEntry={() => {/* tab handles new entry */}}
         onSettings={() => setShowSettings(true)}
+        onFavorites={() => setShowFavorites(true)}
+        onQuickAdd={() => setShowQuickAdd(true)}
       />
 
-      <Navigation
-        activeSection={activeSection}
-        activeTag={activeTag}
-        tags={tags}
-        onSelect={handleSelectSection}
-        isMobile={isMobile}
-      />
-
-      <div className="app-body">
-        {showDailyStrip && dailyData && (
-          <DailyStrip
-            data={dailyData}
-            onSelectEntry={handleSelectEntry}
-          />
-        )}
-
-        <div className="content-area">
-          {/* On mobile: show list or detail, not both */}
-          {(!isMobile || mobileView === 'list') && (
-            <EntryList
-              key={entryListKey}
-              section={activeSection}
-              activeTag={activeTag}
-              selectedEntry={selectedEntry}
-              searchQuery={searchQuery}
-              searchResults={searchResults}
-              onSelectEntry={handleSelectEntry}
-              onNewEntry={() => {
-                setSelectedEntry({ _new: true, section: activeSection });
-                if (isMobile) setMobileView('detail');
-              }}
-            />
-          )}
-
-          {(!isMobile || mobileView === 'detail') && (
-            <EntryDetail
-              key={selectedEntry ? selectedEntry.id || 'new' : 'empty'}
-              entry={selectedEntry}
-              section={activeSection}
-              allTags={tags}
-              onBack={() => {
-                setSelectedEntry(null);
-                if (isMobile) setMobileView('list');
-              }}
-              onChange={handleEntryChange}
-              onRefreshTags={refreshTags}
-            />
-          )}
-        </div>
+      {/* Tab row */}
+      <div className="tab-row">
+        {TABS.map(t => (
+          <button key={t.id} className={`tab-btn${activeTab === t.id ? ' active' : ''}`} onClick={() => handleTabChange(t.id)}>{t.label}</button>
+        ))}
       </div>
 
-      {isMobile && (
-        <MobileNav
-          activeSection={activeSection}
-          onSelect={handleSelectSection}
-        />
-      )}
+      {/* Tab content */}
+      <div className="app-body">
+        {activeTab === 'learn'      && <LearnTab {...tabProps} />}
+        {activeTab === 'workout'    && <WorkoutTab {...tabProps} />}
+        {activeTab === 'meditation' && <MeditationTab {...tabProps} />}
+        {activeTab === 'beauty'     && <BeautyTab {...tabProps} />}
+        {activeTab === 'style'      && <StyleTab {...tabProps} />}
+        {activeTab === 'cycles'     && <CyclesTab {...tabProps} />}
+        {activeTab === 'vision'     && <VisionTab {...tabProps} />}
+      </div>
+
+      {showFavorites && <FavoritesManager onClose={() => setShowFavorites(false)} />}
+      {showQuickAdd  && <QuickAdd onClose={() => setShowQuickAdd(false)} allTags={tags} onRefresh={handleEntryChange} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "sarahs-brain-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "main": "index.js",
   "scripts": {
@@ -8,11 +8,14 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "better-sqlite3": "^9.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.18.3",
     "multer": "^1.4.5-lts.1",
     "node-sqlite3-wasm": "^0.8.56",
+    "rss-parser": "^3.13.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
